@@ -1,6 +1,5 @@
+import { Button, Card, H4, Intent, TextArea } from "@blueprintjs/core";
 import React from "react";
-import { Card, H4, Button, Intent, TextArea, Divider } from "@blueprintjs/core";
-import { UserDataContext } from "../user-data-context";
 
 
 function Topbar() {
@@ -14,7 +13,7 @@ function Topbar() {
     return (<>
         <Card style={{ display: "flex", justifyContent: "space-between" }}>
             <div style={{ display: "flex" }}>
-                <img src="https://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50?f=y&d=identicon" />
+                <img src="https://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50?f=y&d=identicon" alt={"HeavyWHC" + "'s icon"} />
                 <div style={{ width: 15 }} />
                 <div>
                     <H4>HeavyWHC</H4>
@@ -32,7 +31,7 @@ function Topbar() {
 function Message({message, author}: {message: string, author: {nickname: string}}) {
     return (<>
         <div style={{padding: 10, display: "flex"}}>
-            <img src="https://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50?f=y&d=identicon&s=40" />
+            <img src="https://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50?f=y&d=identicon&s=40" alt={"HeavyWHC" + "'s icon"} />
             <div style={{width: 10}}></div>
             <div style={{display: "flex", flexDirection: "column"}}>
                 <strong>

@@ -1,5 +1,4 @@
 import React from 'react';
-import { FirebaseContext } from './firebase-context';
 
 export interface UserData {
     nickname: string;

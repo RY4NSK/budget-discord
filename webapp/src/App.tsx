@@ -89,7 +89,7 @@ function App() {
       <div className={isDarkMode ? "bp3-dark" : ""} style={isDarkMode ? { backgroundColor: Colors.DARK_GRAY4 } : {}}>
         {userData ? <UserDataContext.Provider value={userData}>
           <Main></Main>
-        </UserDataContext.Provider> : <Main></Main>}
+        </UserDataContext.Provider> : <Login></Login>}
       </div>
     </ThemeContext.Provider>
   </>);

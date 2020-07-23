@@ -25,7 +25,7 @@ function ChannelLists() {
         if (setView) {
             setView({serverId: (nodeData.id as string).split("/")[0], channelId: (nodeData.id as string).split("/")[1]})
         }
-    }, [])
+    }, [setView])
 
     const handleServerExpand = React.useCallback((nodeData: ITreeNode) => {
         // Expand server.

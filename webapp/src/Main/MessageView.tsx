@@ -1,7 +1,12 @@
-import { Button, Card, H4, Intent, TextArea, NonIdealState } from "@blueprintjs/core";
-import React, { ChangeEvent } from "react";
-import { ViewContext, ChannelView } from "../view-context";
+import { Button, Card, H4, Intent, NonIdealState, TextArea } from "@blueprintjs/core";
+import React from "react";
 import { FirebaseContext } from "../firebase-context";
+import { ViewContext } from "../view-context";
+import { UserDataContext } from "../user-data-context";
+import firebase from 'firebase/app'
+import 'firebase/firestore'
+
+const fbTimestamp = firebase.firestore.Timestamp
 
 interface ChannelData {
     name: string,
@@ -10,7 +15,7 @@ interface ChannelData {
 
 
 function ChannelTopbar() {
-    let { view, setView } = React.useContext(ViewContext);
+    let { view } = React.useContext(ViewContext);
     let firebase = React.useContext(FirebaseContext)
     let [channelData, setChannelData] = React.useState<ChannelData>()
 
@@ -69,7 +74,7 @@ function Message({ message }: { message: MessageData }) {
             <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
                 <div style={{display: "flex", justifyContent: "space-between", width: "100%"}}>
                     <strong>{message.author.nickname}</strong>
-                    <small>{message.timestamp.toString()}</small>
+                    <small>{message.timestamp.toDate().toLocaleString()}</small>
                 </div>
                 <div>
                     {message.content}
@@ -85,27 +90,32 @@ interface AuthorData {
 }
 
 interface MessageData {
+    id: string,
     author: AuthorData,
     content: string,
-    timestamp: Date
+    timestamp: firebase.firestore.Timestamp
 }
 
 function Messages() {
-    let { view, setView } = React.useContext(ViewContext);
+    let { view } = React.useContext(ViewContext);
     let firebase = React.useContext(FirebaseContext)
     let [messagesData, setMessagesData] = React.useState<MessageData[]>()
 
     React.useEffect(() => {
         if (view && "serverId" in view) {
-            firebase.firestore().collection("servers").doc(view.serverId).collection("channels").doc(view.channelId).collection("messages").onSnapshot(messages => {
-                setMessagesData(messages.docs.map(doc => doc.data() as MessageData))
+            firebase.firestore()
+                .collection("servers").doc(view.serverId)
+                .collection("channels").doc(view.channelId)
+                .collection("messages").orderBy("timestamp", "desc")
+                .onSnapshot(messages => {
+                setMessagesData(messages.docs.map(doc => ({id: doc.id, ...doc.data()} as MessageData)))
             })
         }
     }, [firebase, view])
 
     return (<>
         <div style={{ display: "flex", flexGrow: 1, overflowY: "auto", flexDirection: "column-reverse", height: "100%" }}>
-            {messagesData?.map(messageData => <Message message={messageData}></Message>)}
+            {messagesData?.map(messageData => <Message key={messageData.id} message={messageData}></Message>)}
         </div>
     </>)
 }
@@ -114,9 +124,28 @@ const MAX_ROWS_WITHOUT_SCROLLBAR = 12;
 
 function MessageInput() {
     let [message, setMessage] = React.useState("Hi")
+    let userData = React.useContext(UserDataContext);
+    let { view } = React.useContext(ViewContext);
+    let firebase = React.useContext(FirebaseContext)
 
     const onMessageChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         setMessage(event.target.value)
+    }
+
+    const onMessageSend = () => {
+        if (message.length && view) {
+            if ("serverId" in view) {
+                firebase.firestore().collection("servers").doc(view.serverId).collection("channels").doc(view.channelId).collection("messages").add({
+                    author: {
+                        nickname: userData.nickname,
+                        ref: "/users/" + firebase.auth().currentUser?.uid
+                    },
+                    content: message,
+                    timestamp: fbTimestamp.now()
+                })
+                setMessage("")
+            }
+        }
     }
 
     return (<>
@@ -131,13 +160,13 @@ function MessageInput() {
                 rows={message.split("\n").length < MAX_ROWS_WITHOUT_SCROLLBAR ? message.split("\n").length : MAX_ROWS_WITHOUT_SCROLLBAR}
             />
             <div style={{ width: 15 }} />
-            <Button style={{ paddingLeft: 25, paddingRight: 25 }} icon="send-message" intent={Intent.PRIMARY}></Button>
+            <Button style={{ paddingLeft: 25, paddingRight: 25 }} icon="send-message" intent={Intent.PRIMARY} onClick={onMessageSend}></Button>
         </div>
     </>)
 }
 
 export function MessageView() {
-    let { view, setView } = React.useContext(ViewContext);
+    let { view } = React.useContext(ViewContext);
     return (<>
         {view ?
             <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>

@@ -1,4 +1,4 @@
-import { Button, Toaster } from "@blueprintjs/core";
+import { Button, Toaster, Colors } from "@blueprintjs/core";
 import firebase from 'firebase/app';
 import 'firebase/auth';
 import React from 'react';
@@ -6,6 +6,7 @@ import './App.css';
 import { FirebaseContext } from './firebase-context';
 import { Main } from "./Main/Main";
 import { UserDataContext, UserData } from "./user-data-context";
+import { ThemeContext } from "./theme-context";
 
 export const toaster = Toaster.create();
 
@@ -52,6 +53,7 @@ function Login() {
 
 function App() {
   let [userData, setUserData] = React.useState<UserData | null>(null);
+  let [isDarkMode, setIsDarkMode] = React.useState<boolean>(false);
   let [userDataSnapshotUnsubscriber, setUserDataSnapshotUnsubscriber] = React.useState<(() => void) | null>(null);
   const firebase = React.useContext(FirebaseContext);
 
@@ -83,9 +85,13 @@ function App() {
   }, [firebase]);
 
   return (<>
-    {userData ? <UserDataContext.Provider value={userData}>
-      <Main></Main>
-    </UserDataContext.Provider> : <Login></Login>}
+    <ThemeContext.Provider value={{isDarkMode, setIsDarkMode}}>
+      <div className={isDarkMode ? "bp3-dark" : ""} style={isDarkMode ? { backgroundColor: Colors.DARK_GRAY4 } : {}}>
+        {userData ? <UserDataContext.Provider value={userData}>
+          <Main></Main>
+        </UserDataContext.Provider> : <Main></Main>}
+      </div>
+    </ThemeContext.Provider>
   </>);
 }
 

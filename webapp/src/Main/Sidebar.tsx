@@ -1,9 +1,11 @@
-import { Button, Card, Collapse, H3, InputGroup, Intent, ITreeNode, Label, Tree, Position } from "@blueprintjs/core";
-import { TimezonePicker, TimezoneDisplayFormat } from "@blueprintjs/timezone";
+import { Button, Card, Collapse, H3, InputGroup, Intent, ITreeNode, Label, Position, Tree, Checkbox, Alignment } from "@blueprintjs/core";
+import { TimezoneDisplayFormat, TimezonePicker } from "@blueprintjs/timezone";
 import React, { ChangeEvent } from "react";
 import { toaster } from "../App";
-import { UserDataContext, UserData } from "../user-data-context";
 import { FirebaseContext } from "../firebase-context";
+import { UserData, UserDataContext } from "../user-data-context";
+import { ViewContext } from "../view-context";
+import { ThemeContext } from "../theme-context";
 
 //create your forceUpdate hook
 function useForceUpdate() {
@@ -13,56 +15,46 @@ function useForceUpdate() {
 
 function ChannelLists() {
     let forceUpdate = useForceUpdate();
-    let [serverNodes, setServerNodes] = React.useState<ITreeNode[]>([
-        {
-            id: 1,
-            icon: "cloud",
-            label: <>Bot Testing</>,
-            hasCaret: true,
-            childNodes: [
-                {
-                    id: 2,
-                    icon: "chat",
-                    label: <>Test Channel</>
-                }
-            ]
-        }
-    ])
+    let [serverNodes, setServerNodes] = React.useState<ITreeNode[]>([])
+    let {setView} = React.useContext(ViewContext)
 
     let firebase = React.useContext(FirebaseContext)
+
+    const handleChannelClick = React.useCallback((nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
+        // Open/switch channel.
+        if (setView) {
+            setView({serverId: (nodeData.id as string).split("/")[0], channelId: (nodeData.id as string).split("/")[1]})
+        }
+    }, [])
+
+    const handleServerExpand = React.useCallback((nodeData: ITreeNode) => {
+        // Expand server.
+        nodeData.isExpanded = true;
+        forceUpdate()
+    }, [forceUpdate])
+
+    const handleServerCollapse = React.useCallback((nodeData: ITreeNode) => {
+        // Collapse server.
+        nodeData.isExpanded = false;
+        forceUpdate()
+    }, [forceUpdate])
 
     React.useEffect(() => {
         firebase.firestore().collection("servers").onSnapshot(async snapshot => {
             setServerNodes(await Promise.all(snapshot.docs.map(async server => ({
-                    id: server.id,
-                    icon: "cloud",
-                    label: server.data().name,
-                    hasCaret: true,
-                    childNodes: (await server.ref.collection("channels").get()).docs.map(channel => ({
-                        id: channel.id,
-                        label: channel.data().name,
-                        icon: "chat"
-                    })) as ITreeNode[]
-                } as ITreeNode)
+                id: server.id,
+                icon: "cloud",
+                label: server.data().name,
+                hasCaret: true,
+                childNodes: (await server.ref.collection("channels").get()).docs.map(channel => ({
+                    id: server.id  + "/" + channel.id,
+                    label: channel.data().name,
+                    icon: "chat"
+                })) as ITreeNode[]
+            } as ITreeNode)
             )))
         })
     }, [firebase])
-
-    const handleNodeClick = (nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
-        // Open/switch channel.
-    }
-
-    const handleNodeExpand = (nodeData: ITreeNode) => {
-        // Expand server.
-        nodeData.isExpanded = true;
-        forceUpdate()
-    }
-
-    const handleNodeCollapse = (nodeData: ITreeNode) => {
-        // Collapse server.
-        nodeData.isExpanded = false;
-        forceUpdate()
-    }
 
     return (<>
         <div style={{ display: 'flex', height: '100%', flexDirection: "column" }}>
@@ -74,10 +66,10 @@ function ChannelLists() {
                 <H3>Channels</H3>
                 <div style={{ height: "100%" }}>
                     <Tree
-                        onNodeClick={handleNodeClick}
-                        onNodeExpand={handleNodeExpand}
-                        onNodeCollapse={handleNodeCollapse}
                         contents={serverNodes}
+                        onNodeClick={handleChannelClick}
+                        onNodeCollapse={handleServerCollapse}
+                        onNodeExpand={handleServerExpand}
                     />
                 </div>
             </Card>
@@ -87,6 +79,7 @@ function ChannelLists() {
 
 function SettingsPanel() {
     let [settingsOpen, setSettingsOpen] = React.useState(false);
+    let {isDarkMode, setIsDarkMode} = React.useContext(ThemeContext)
     let userData = React.useContext(UserDataContext);
     let [settings, setSettings] = React.useState<UserData>(userData)
     const firebase = React.useContext(FirebaseContext);
@@ -136,7 +129,7 @@ function SettingsPanel() {
         <Button text={settingsOpen ? "Close Settings" : "Open Settings"} intent={Intent.SUCCESS} onClick={toggleSettings} />
         <Collapse isOpen={settingsOpen} keepChildrenMounted={true}>
             <div style={{ height: 15 }} />
-            <Button text="Procure Toast" intent={Intent.SUCCESS} style={{ width: "100%" }} onClick={toast} />
+            <Button text="Procure Toast" intent={Intent.PRIMARY} style={{ width: "100%" }} onClick={toast} />
             <div style={{ height: 15 }} />
             <Card>
                 <Label>
@@ -156,7 +149,10 @@ function SettingsPanel() {
                         popoverProps={{ position: Position.BOTTOM }}
                     />
                 </Label>
-                <Button icon="floppy-disk" intent={Intent.SUCCESS} text="Save" onClick={saveSettings} />
+                <div style={{display: "flex", justifyContent: "space-between", alignItems: "baseline"}}>
+                    <Button icon="floppy-disk" intent={Intent.SUCCESS} text="Save" onClick={saveSettings} />
+                    <Checkbox checked={isDarkMode} onChange={(e) => {if (setIsDarkMode) setIsDarkMode(!isDarkMode)}} alignIndicator={Alignment.RIGHT}>Dark Mode?</Checkbox>
+                </div>
             </Card>
             <div style={{ height: 15 }} />
             <Card>
@@ -181,7 +177,6 @@ function SettingsPanel() {
         </Collapse>
     </>)
 }
-
 
 export function Sidebar() {
     return (<>

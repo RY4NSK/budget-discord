@@ -1,44 +1,42 @@
-import { Button, Toaster, Colors } from "@blueprintjs/core";
+import { Button, Colors, Toaster } from "@blueprintjs/core";
 import firebase from 'firebase/app';
 import 'firebase/auth';
 import React from 'react';
+import {
+  BrowserRouter as Router,
+  Redirect, Route, Switch, useHistory, useLocation
+} from "react-router-dom";
 import './App.css';
 import { FirebaseContext } from './firebase-context';
 import { Main } from "./Main/Main";
-import { UserDataContext, UserData } from "./user-data-context";
 import { ThemeContext } from "./theme-context";
+import { UserData } from "./user-data-context";
 
 export const toaster = Toaster.create();
 
 const provider = new firebase.auth.GoogleAuthProvider();
 
 function GoogleSignInComponent() {
+  const history = useHistory();
+  let location = useLocation();
 
   let [isSigningIn, setIsSigningIn] = React.useState(false);
-  let [user, setUser] = React.useState<firebase.User | null>(null)
 
   const firebase = React.useContext(FirebaseContext);
 
   const signIn = React.useCallback(() => {
     setIsSigningIn(true)
     firebase.auth().signInWithPopup(provider).then((result: firebase.auth.UserCredential) => {
-      setIsSigningIn(false)
+      let from = (location.state as any).pathname as any || "/";
+      history.replace(from)
     }).catch((error: firebase.auth.AuthError) => {
       setIsSigningIn(false)
     })
-  }, [firebase]);
-
-  const signOut = React.useCallback(() => {
-    setIsSigningIn(true)
-    firebase.auth().signOut().then(() => {
-      setUser(null)
-      setIsSigningIn(false)
-    })
-  }, [firebase])
+  }, [firebase, history, location.state]);
 
   return (
     <>
-      <Button onClick={user ? signOut : signIn} loading={isSigningIn}>{user ? "Sign Out" : "Sign In With Google"}</Button>
+      <Button onClick={signIn} loading={isSigningIn}>{"Sign In With Google"}</Button>
     </>
   )
 }
@@ -85,13 +83,44 @@ function App() {
   }, [firebase]);
 
   return (<>
-    <ThemeContext.Provider value={{isDarkMode, setIsDarkMode}}>
-      <div className={isDarkMode ? "bp3-dark" : ""} style={isDarkMode ? { backgroundColor: Colors.DARK_GRAY4 } : {}}>
-        {userData ? <UserDataContext.Provider value={userData}>
-          <Main></Main>
-        </UserDataContext.Provider> : <Login></Login>}
-      </div>
-    </ThemeContext.Provider>
+    <Router>
+      <ThemeContext.Provider value={{ isDarkMode, setIsDarkMode }}>
+        <div className={isDarkMode ? "bp3-dark" : ""} style={isDarkMode ? { backgroundColor: Colors.DARK_GRAY4 } : {}}>
+          <Switch>
+            <Route
+              path="/login"
+              render={({ location }) =>
+                !(firebase.auth().currentUser && userData) ? (
+                  <Login></Login>
+                ) : (
+                    <Redirect
+                      to={{
+                        pathname: "/",
+                        state: { from: location }
+                      }}
+                    />
+                  )
+              }
+            />
+            <Route
+              path="/"
+              render={({ location }) =>
+                firebase.auth().currentUser && userData ? (
+                  <Main></Main>
+                ) : (
+                    <Redirect
+                      to={{
+                        pathname: "/login",
+                        state: { from: location }
+                      }}
+                    />
+                  )
+              }
+            />
+          </Switch>
+        </div>
+      </ThemeContext.Provider>
+    </Router>
   </>);
 }
 

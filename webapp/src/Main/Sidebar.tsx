@@ -4,8 +4,8 @@ import React, { ChangeEvent } from "react";
 import { toaster } from "../App";
 import { FirebaseContext } from "../firebase-context";
 import { UserData, UserDataContext } from "../user-data-context";
-import { ViewContext } from "../view-context";
 import { ThemeContext } from "../theme-context";
+import { useHistory } from "react-router-dom";
 
 //create your forceUpdate hook
 function useForceUpdate() {
@@ -16,16 +16,14 @@ function useForceUpdate() {
 function ChannelLists() {
     let forceUpdate = useForceUpdate();
     let [serverNodes, setServerNodes] = React.useState<ITreeNode[]>([])
-    let {setView} = React.useContext(ViewContext)
+    let history = useHistory();
 
     let firebase = React.useContext(FirebaseContext)
 
     const handleChannelClick = React.useCallback((nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
         // Open/switch channel.
-        if (setView) {
-            setView({serverId: (nodeData.id as string).split("/")[0], channelId: (nodeData.id as string).split("/")[1]})
-        }
-    }, [setView])
+        history.replace(`/server/${(nodeData.id as string).split("/")[0]}/channel/${(nodeData.id as string).split("/")[1]}`)
+    }, [history])
 
     const handleServerExpand = React.useCallback((nodeData: ITreeNode) => {
         // Expand server.
